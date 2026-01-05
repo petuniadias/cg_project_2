@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Teleport 3000-inator</title>
+    <title>Teleport</title>
+    <link rel="stylesheet" href="assets/styles/styles.css">
     <script type="importmap">
         {
             "imports": {
@@ -12,6 +13,17 @@
     </script>
 </head>
 <body>
+    <div class="pop-up">
+        <div class="title">
+            <h3>Teleportation completed!</h3>
+            <i data-lucide="x" class="x-mark" style="cursor: pointer;"></i>
+        </div>
+        <p>All atoms are present.</p>
+    </div>
     <script type="module" src="./script/main.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
