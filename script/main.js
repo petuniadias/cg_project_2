@@ -8,7 +8,7 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-    75,
+    100,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
@@ -19,8 +19,11 @@ const orbit = new OrbitControls(camera, renderer.domElement);
 const axesHelper = new THREE.AxesHelper(3 /* changes the length of the axis */);
 scene.add(axesHelper);
 
-camera.position.set(-10, 30, 30);
+camera.position.set(-0.8, 0.8, 3.5);
+camera.rotation.set(0, THREE.MathUtils.degToRad(-18), 0);
 orbit.update();
+
+scene.background = new THREE.Color (0xff0000);
 
 const gridHelper = new THREE.GridHelper();
 scene.add(gridHelper);
@@ -33,11 +36,19 @@ const cylinderGeo = new THREE.CylinderGeometry(1, 1, 1, 32);
 
 let microwave = 0;
 
+let doorsIsMoving = false;
 let doorsClosed = false;
-let button1Clicked = false;
-let button2Clicked = false;
+let button1Click = true;
+let button2Click = false;
 let rotAlavanca = 0;
 let movingForward = true;
+let isMoving;
+let btnIsMoving;
+let button2Clicked;
+let showWarning = false;
+let isTeleporting = false;
+let teleportComplete = false;
+let teleportStage = 0;
 
 // platform
 const platformMaterial = new THREE.MeshStandardMaterial({
@@ -52,11 +63,6 @@ const platform2 = new THREE.Mesh(cylinderGeo, platformMaterial);
 platform1.attach(platform2);
 platform2.position.set(0.028, 0.795, -0.005);
 platform2.scale.set(0.8125, 2.3, 0.8125);
-
-const platform3 = new THREE.Mesh(cylinderGeo, platformMaterial);
-scene.attach(platform3);
-platform3.position.set(0.348, 0.525, -0.184);
-platform3.scale.set(0.400, 0.100, 0.400);
 
 //capsule
 const wallMaterial = new THREE.MeshStandardMaterial({
@@ -133,16 +139,21 @@ wall10.scale.set(0.220, 0.200, 1.100);
 
 // doors
 const door1 = new THREE.Mesh(boxGeo, wallMaterial);
-scene.attach(door1);
-door1.position.set(-0.004, 1.348, 0.258);
+capsule.attach(door1);
+door1.position.set(-0.20, 1.348, 0.20);
 door1.rotation.set(0, THREE.MathUtils.degToRad(68.80), 0);
 door1.scale.set(0.100, 1.600, 0.3);
 
 const door2 = new THREE.Mesh(boxGeo, wallMaterial);
-scene.attach(door2);
-door2.position.set(0.337, 1.348, 0.399);
+capsule.attach(door2);
+door2.position.set(0.537, 1.348, 0.459);
 door2.rotation.set(0, THREE.MathUtils.degToRad(68.80), 0);
 door2.scale.set(0.100, 1.600, 0.30);
+
+const platform3 = new THREE.Mesh(cylinderGeo, platformMaterial);
+capsule.attach(platform3);
+platform3.position.set(0.348, 0.525, -0.184);
+platform3.scale.set(0.400, 0.100, 0.400);
 
 // ceiling
 
@@ -150,12 +161,12 @@ const ceilingMaterial = new THREE.MeshStandardMaterial({
     color: 0xE3E3E3
 });
 const ceiling1 = new THREE.Mesh(cylinderGeo, ceilingMaterial);
-scene.attach(ceiling1);
+capsule.attach(ceiling1);
 ceiling1.position.set(0.359, 2.442, -0.125);
 ceiling1.scale.set(0.800, 0.200, 0.800);
 
 const ceiling2 = new THREE.Mesh(cylinderGeo, platformMaterial);
-scene.attach(ceiling2);
+capsule.attach(ceiling2);
 ceiling2.position.set(0.359, 2.614, -0.125);
 ceiling2.scale.set(0.700, 0.200, 0.700);
 
@@ -235,6 +246,7 @@ mainAlavanca.scale.set(0.050, 0.050, 0.200);
 const cobaia = new THREE.Group();
 platform3.attach(cobaia)
 cobaia.position.set(0.4, -3.3, -2.3);
+cobaia.receiveShadow = true;
 
 const cobaiaMaterial = new THREE.MeshStandardMaterial({
     color: 0x00FF00
@@ -319,6 +331,18 @@ button2.position.set(-0.697, 1.008, 0.102);
 button2.scale.set(0.020, 0.020, 0.020);
 button2.rotation.set(THREE.MathUtils.degToRad(35), 0, 0);
 
+const idkwhatisthis = new THREE.Mesh(cylinderGeo, pecaMaterial);
+idkwhatisthis.position.set(0.061, 2.446, 0.597);
+idkwhatisthis.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(25));
+idkwhatisthis.scale.set(0.120, 0.050, 0.120);
+ceiling2.attach(idkwhatisthis);
+
+const idkwhatisthis2 = new THREE.Mesh(cylinderGeo, pecaMaterial);
+idkwhatisthis2.position.set(0.057, 2.446, 0.603);
+idkwhatisthis2.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(25));
+idkwhatisthis2.scale.set(0.100, 0.100, 0.100);
+idkwhatisthis.attach(idkwhatisthis2);
+
 // light
 
 const pointLight = new THREE.PointLight(0xC800FF, 50 /** intensity */);
@@ -328,15 +352,16 @@ pointLight.distance = 50;
 pointLight.decay = 10;
 
 pointLight.position.set(0.348, 1.519, -0.179);
+pointLight.castShadow = true
 
 const spotLight = new THREE.SpotLight(0xFFFFFF, 7.82 /** intensity */);
 scene.add(spotLight);
 spotLight.castShadow = true;
 spotLight.position.set(-3.912, 3.158, 4.126);
-spotLight.penumbra = 2;
-spotLight.decay = 1.2;
-spotLight.distance = 0;
+spotLight.penumbra = 1;
+spotLight.decay = 2;
 spotLight.angle = 0.634;
+
 const sLightHelper = new THREE.SpotLightHelper(spotLight, 2 /** size of the light */);
 scene.add(sLightHelper);
 
@@ -370,6 +395,8 @@ function teletransportEnd(results) {
 
 const popUp = document.querySelector('.pop-up');
 const xMark = document.querySelector('.x-mark');
+const imgWarning = document.querySelector('img');
+
 xMark.addEventListener('click', () => {
     popUp.style.display = "none";
 });
@@ -379,61 +406,165 @@ function displayResult() {
 
     document.querySelector('.pop-up h3').innerText = finalResult.title;
     document.querySelector('.pop-up p').innerText = finalResult.message;
+    if (finalResult === results[0]) imgWarning.style.display = "none"; 
     popUp.style.display = "block";
 }
 
+const alavancaId = mainAlavanca.id;
+console.log(alavancaId);
+
+const mousePosition = new THREE.Vector2();
+
+const rayCaster = new THREE.Raycaster();
+
+window.addEventListener('click', e => {
+    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    
+    rayCaster.setFromCamera(mousePosition, camera);
+
+    const intersects = rayCaster.intersectObjects(scene.children, true);
+    console.log(intersects);
+    
+    if(intersects.length > 0) {
+        const clickedObject = intersects[0].object;
+
+        if (clickedObject === mainAlavanca) {
+            if (doorsClosed) {
+                isMoving = true;
+            } else {
+                displayWarning();
+            }
+        }
+
+        if (clickedObject === button1) {
+            btnIsMoving = true;
+        }
+    }
+});
+
+function displayWarning() {
+    const warning = document.createElement('div');
+    warning.classList.add("pop-up");
+    warning.innerHTML += `
+      <h3>Close the door to start teleportation! (for safety reasons)</h3>
+    `;
+
+    warning.style.display = 'block';
+    document.body.appendChild(warning);
+    setTimeout(() => {
+        warning.remove();
+    }, 3000);
+}
+
 function animate() {
-    if(movingForward) {
-        rotAlavanca += 0.02;
-        if (rotAlavanca >= 2) movingForward = false;
+
+    if (isTeleporting) {
+        pointLight.intensity = Math.random() * 500;
     } else {
-        rotAlavanca -= 0.02;
-        if (rotAlavanca <= -0.5) movingForward = true;
+        pointLight.intensity = 50;
     }
 
-    mainMechanics.rotation.x = rotAlavanca;
+    if (isMoving) {
+        if(movingForward) {
+            rotAlavanca += 0.02;
+            if (rotAlavanca >= 2) {
+                movingForward = false; 
+                isMoving = false;
+                cobaia.visible = false;
+                isTeleporting = true;
+                
+                if (teleportStage === 0) { 
+
+                    setTimeout(() => {
+
+                        isTeleporting = false; 
+                        isMoving = true;
+                        doorsIsMoving = true;
+                        teleportComplete = true;
+                    }, 3000);
+
+                    cobaia.visible = false;
+                    teleportStage = 1;
+                } else {
+                    setTimeout(() => {
+                        isTeleporting = false;
+                        displayResult();
+                        isMoving = true;
+                        doorsIsMoving = true;
+                        teleportComplete = true;
+                        teleportStage = 0; // reset stage once finished
+                    }, 3000);
+
+                    cobaia.visible = true;
+                }
+
+            }
+        } else {
+            rotAlavanca -= 0.02;
+            if (rotAlavanca <= -0.5) {
+                movingForward = true;
+                if (teleportStage === 1) cobaia.visible = true;
+                isMoving = false;
+            }
+            
+        }
+        mainMechanics.rotation.x = rotAlavanca;
+    }
 
     // door closing and opening
 
-    if (doorsClosed) {
-        door1.position.x -= 0.005;
-        door1.position.z -= 0.0015;
-        door2.position.x += 0.005;
-        door2.position.z += 0.0015;
-        if (door1.position.x <= -0.20) doorsClosed = false;
-    } else {
-        door1.position.x += 0.005;
-        door1.position.z += 0.0015;
-        door2.position.x -= 0.005;
-        door2.position.z -= 0.0015;
-        if (door1.position.x >= 0.025) doorsClosed = true;
+    if (doorsIsMoving) {
+        if (doorsClosed) {
+            door1.position.x -= 0.005;
+            door1.position.z -= 0.0015;
+            door2.position.x += 0.005;
+            door2.position.z += 0.0015;
+            if (door1.position.x <= -0.20) {
+                doorsClosed = false;
+                doorsIsMoving = false;
+            }
+        } else {
+            door1.position.x += 0.005;
+            door1.position.z += 0.0015;
+            door2.position.x -= 0.005;
+            door2.position.z -= 0.0015;
+            if (door1.position.x >= 0.025) {
+                doorsClosed = true;
+                doorsIsMoving = false;
+            }
+        }
     }
 
-    if (button1Clicked) {
-        button1.position.y -= 0.001;
-        button1.position.z -= 0.00025;
-        if (button1.position.y <= 0.991) button1Clicked = false;
-    } else {
-        button1.position.y += 0.001;
-        button1.position.z += 0.00025;
-        if (button1.position.y >= 1.011) button1Clicked = true;
+    if (btnIsMoving) {
+        if (button1Click) {
+            button1.position.y -= 0.001;
+            button1.position.z -= 0.00025;
+            if (button1.position.y <= 1.005) {
+                button1Click = false;
+                btnIsMoving = false;
+                doorsIsMoving = true;
+            }
+        } else {
+            button1.position.y += 0.001;
+            button1.position.z += 0.00025;
+            if (button1.position.y >= 1.011) {
+                button1Click = true;
+                btnIsMoving = false;
+                doorsIsMoving = true;
+            }
+        }
     }
 
-    if (button2Clicked) {
-        button2.position.y -= 0.001;
-        button2.position.z -= 0.00025;
-        if (button2.position.y <= 0.991) button2Clicked = false;
-    } else {
-        button2.position.y += 0.001;
-        button2.position.z += 0.00025;
-        if (button2.position.y >= 1.011) button2Clicked = true;
-    }
-
-    door1.position.x
-    door1.position.z
-    door2.position.x
-    door2.position.z
-
+    // if (button2Click) {
+    //     button2.position.y -= 0.001;
+    //     button2.position.z -= 0.00025;
+    //     if (button2.position.y <= 0.991) button2Click = false;
+    // } else {
+    //     button2.position.y += 0.001;
+    //     button2.position.z += 0.00025;
+    //     if (button2.position.y >= 1.011) button2Click = true;
+    // }
 
     microwave += 0.02;
 
