@@ -65,6 +65,7 @@ let isTeleporting = false;
 let teleportComplete = false;
 let teleportStage = 0;
 
+
 // teleport machine group
 
 
@@ -519,10 +520,8 @@ const rayCaster = new THREE.Raycaster();
  * */
 
 const mousePosition = new THREE.Vector2();
-const mouseDown = new THREE.Vector2();
-const mouseMove = new THREE.Vector2();
 
-window.addEventListener('click', e => {
+document.addEventListener('click', e => {
     mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
     mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
     
@@ -571,7 +570,6 @@ function mutation(canMutate) {
             leg2.scale.set(0.05, 0.05, 0.05); 
             cobaiaMaterial.color.set(0xff0000); 
         } else {
-            
             body.scale.set(0.200, 0.200, 0.150);
             head.position.set(-0.094, 0.821, 0.866);
             arm1.rotation.set(0, 0, THREE.MathUtils.degToRad(-10));
