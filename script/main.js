@@ -8,7 +8,7 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-    100,
+    35,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
@@ -16,17 +16,27 @@ const camera = new THREE.PerspectiveCamera(
 
 const orbit = new OrbitControls(camera, renderer.domElement);
 
-const axesHelper = new THREE.AxesHelper(3 /* changes the length of the axis */);
-scene.add(axesHelper);
+// const axesHelper = new THREE.AxesHelper(3 /* changes the length of the axis */);
+// scene.add(axesHelper);
 
-camera.position.set(-0.8, 0.8, 3.5);
+camera.position.set(-2, 3, 6);
+
 camera.rotation.set(0, THREE.MathUtils.degToRad(-18), 0);
+
+orbit.target.set(0.1, 1, -0.1);
 orbit.update();
 
-scene.background = new THREE.Color (0xff0000);
+scene.traverse((node) => {
+    if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+});
 
-const gridHelper = new THREE.GridHelper();
-scene.add(gridHelper);
+// scene.background = new THREE.Color (0xff0000);
+
+// const gridHelper = new THREE.GridHelper();
+// scene.add(gridHelper);
 
 /** GEOMETRIES */
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -34,21 +44,31 @@ const cylinderGeo = new THREE.CylinderGeometry(1, 1, 1, 32);
 
 /** variáveis */
 
+// platform3
 let microwave = 0;
 
+// doors
 let doorsIsMoving = false;
 let doorsClosed = false;
+
+// button to close door
 let button1Click = true;
-let button2Click = false;
+let btnIsMoving;
+
+// alavanca
 let rotAlavanca = 0;
 let movingForward = true;
 let isMoving;
-let btnIsMoving;
-let button2Clicked;
-let showWarning = false;
+
+// teleporting status
 let isTeleporting = false;
 let teleportComplete = false;
 let teleportStage = 0;
+
+// teleport machine group
+
+
+let button2Click = false;
 
 // platform
 const platformMaterial = new THREE.MeshStandardMaterial({
@@ -63,6 +83,9 @@ const platform2 = new THREE.Mesh(cylinderGeo, platformMaterial);
 platform1.attach(platform2);
 platform2.position.set(0.028, 0.795, -0.005);
 platform2.scale.set(0.8125, 2.3, 0.8125);
+
+platform1.receiveShadow = true;
+platform2.receiveShadow = true;
 
 //capsule
 const wallMaterial = new THREE.MeshStandardMaterial({
@@ -155,6 +178,20 @@ capsule.attach(platform3);
 platform3.position.set(0.348, 0.525, -0.184);
 platform3.scale.set(0.400, 0.100, 0.400);
 
+
+/**
+ * the cast shadow only works on meshes
+ * this function verifies if is a mesh 
+ * or not and applies the sahdow
+ */
+
+capsule.traverse(function (node) {
+    if(node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+});
+
 // ceiling
 
 const ceilingMaterial = new THREE.MeshStandardMaterial({
@@ -164,11 +201,15 @@ const ceiling1 = new THREE.Mesh(cylinderGeo, ceilingMaterial);
 capsule.attach(ceiling1);
 ceiling1.position.set(0.359, 2.442, -0.125);
 ceiling1.scale.set(0.800, 0.200, 0.800);
+ceiling1.castShadow = true;
+ceiling1.receiveShadow = true;
 
 const ceiling2 = new THREE.Mesh(cylinderGeo, platformMaterial);
 capsule.attach(ceiling2);
 ceiling2.position.set(0.359, 2.614, -0.125);
 ceiling2.scale.set(0.700, 0.200, 0.700);
+ceiling2.castShadow = true;
+ceiling2.receiveShadow = true;
 
 // controller
 
@@ -179,12 +220,16 @@ const controller1 = new THREE.Mesh(boxGeo, controllerMaterial);
 scene.attach(controller1);
 controller1.position.set(-0.639, 0.629, 0.072);
 controller1.scale.set(0.400, 0.500, 0.300);
+controller1.castShadow = true;
+controller1.receiveShadow = true;
 
 const controller2 = new THREE.Mesh(boxGeo, controllerMaterial);
 scene.attach(controller2);
 controller2.position.set(-0.639, 0.871, 0.102);
 controller2.rotation.set(THREE.MathUtils.degToRad(-55), 0, 0);
 controller2.scale.set(0.500, 0.400, 0.200);
+controller2.castShadow = true;
+controller2.receiveShadow = true;
 
 // alavanca
 
@@ -196,18 +241,24 @@ scene.attach(alavanca1);
 alavanca1.position.set(-0.609, 0.965, 0.188);
 alavanca1.rotation.set(THREE.MathUtils.degToRad(35), 0, 0);
 alavanca1.scale.set(0.050, 0.050, 0.240);
+alavanca1.castShadow = true;
+alavanca1.receiveShadow = true;
 
 const alavanca2 = new THREE.Mesh(boxGeo, alavancaMaterial);
 scene.attach(alavanca2);
 alavanca2.position.set(-0.511, 0.965, 0.188);
 alavanca2.rotation.set(THREE.MathUtils.degToRad(35), 0, 0);
 alavanca2.scale.set(0.050, 0.050, 0.240);
+alavanca2.castShadow = true;
+alavanca2.receiveShadow = true;
 
 const alavanca3 = new THREE.Mesh(boxGeo, alavancaMaterial);
 scene.attach(alavanca3);
 alavanca3.position.set(-0.561, 0.955, 0.175);
 alavanca3.rotation.set(THREE.MathUtils.degToRad(35), 0, 0);
 alavanca3.scale.set(0.050, 0.020, 0.240);
+alavanca3.castShadow = true;
+alavanca3.receiveShadow = true;
 
 const pecaMaterial = new THREE.MeshStandardMaterial({
     color: 0xBA6D00
@@ -217,12 +268,16 @@ scene.attach(peca1);
 peca1.position.set(-0.609, 0.972, 0.197);
 peca1.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(90));
 peca1.scale.set(0.070, 0.050, 0.070);
+peca1.castShadow = true;
+peca1.receiveShadow = true;
 
 const peca2 = new THREE.Mesh(cylinderGeo, pecaMaterial);
 scene.attach(peca2);
 peca2.position.set(-0.511, 0.972, 0.197);
 peca2.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(90));
 peca2.scale.set(0.070, 0.050, 0.070);
+peca2.castShadow = true;
+peca2.receiveShadow = true;
 
 const mainMechanics = new THREE.Group();
 scene.add(mainMechanics);
@@ -233,6 +288,8 @@ mainMechanics.add(roldana);
 roldana.position.set(0, 0, 0);
 roldana.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(90));
 roldana.scale.set(0.020, 0.180, 0.020);
+roldana.castShadow = true;
+roldana.receiveShadow = true;
 
 const mainAlavanca = new THREE.Mesh(boxGeo, alavancaMaterial);
 mainMechanics.add(mainAlavanca);
@@ -240,6 +297,13 @@ mainAlavanca.rotation.set(THREE.MathUtils.degToRad(70), 0, 0);
 // mainAlavanca.position.set(-0.559, 1.055, 0.164);
 mainAlavanca.position.set(0, 0.08, -0.03);
 mainAlavanca.scale.set(0.050, 0.050, 0.200);
+
+mainMechanics.traverse(function(node) {
+    if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+});
 
 // cobaia
 
@@ -300,6 +364,14 @@ eye2.scale.set(0.025, 0.025, 0.025);
 eye2.position.set(-0.168, 0.823, 0.930);
 eye2.rotation.set(0, THREE.MathUtils.degToRad(-24.20), 0);
 
+cobaia.traverse(function(node) {
+    if (node.isMesh) {
+        node.castShadow = true;
+    }
+});
+
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 // button
 const button1Group = new THREE.Group();
 scene.add(button1Group);
@@ -331,6 +403,20 @@ button2.position.set(-0.697, 1.008, 0.102);
 button2.scale.set(0.020, 0.020, 0.020);
 button2.rotation.set(THREE.MathUtils.degToRad(35), 0, 0);
 
+button1Group.traverse(function(node) {
+    if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+});
+
+button2Group.traverse(function(node) {
+    if (node.isMesh) {
+        node.castShadow = true;
+        node.receiveShadow = true;
+    }
+});
+
 const idkwhatisthis = new THREE.Mesh(cylinderGeo, pecaMaterial);
 idkwhatisthis.position.set(0.061, 2.446, 0.597);
 idkwhatisthis.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(25));
@@ -345,28 +431,36 @@ idkwhatisthis.attach(idkwhatisthis2);
 
 // light
 
-const pointLight = new THREE.PointLight(0xC800FF, 50 /** intensity */);
-scene.add(pointLight);
+const pointLight = new THREE.PointLight(0xC800FF, 500 /** intensity */);
 pointLight.castShadow = true;
-pointLight.distance = 50;
-pointLight.decay = 10;
+pointLight.distance = 3;
+pointLight.decay = 1.2;
+pointLight.shadow.bias = -0.005;
+pointLight.shadow.mapSize.width = 2048;
+pointLight.shadow.mapSize.height = 2048;
 
+scene.add(pointLight);
 pointLight.position.set(0.348, 1.519, -0.179);
-pointLight.castShadow = true
 
-const spotLight = new THREE.SpotLight(0xFFFFFF, 7.82 /** intensity */);
+const spotLight = new THREE.SpotLight(0xFFFFFF, 10 /** intensity */);
 scene.add(spotLight);
-spotLight.castShadow = true;
+
 spotLight.position.set(-3.912, 3.158, 4.126);
 spotLight.penumbra = 1;
-spotLight.decay = 2;
-spotLight.angle = 0.634;
+spotLight.decay = 1.5;
+spotLight.angle = 0.5;
 
-const sLightHelper = new THREE.SpotLightHelper(spotLight, 2 /** size of the light */);
-scene.add(sLightHelper);
+spotLight.target = platform1;
+spotLight.castShadow = true;
 
-const sLightShadowHelper = new THREE.CameraHelper(spotLight.shadow.camera);
-scene.add(sLightShadowHelper);
+spotLight.shadow.mapSize.width = 4096;
+spotLight.shadow.mapSize.height = 4096;
+
+// const sLightHelper = new THREE.SpotLightHelper(spotLight, 2 /** size of the light */);
+// scene.add(sLightHelper);
+
+// const sLightShadowHelper = new THREE.CameraHelper(spotLight.shadow.camera);
+// scene.add(sLightShadowHelper);
 
 // const textureLoader = new THREE.TextureLoader();
 // scene.background = textureLoader.load('./assets/img/creepylab.jpg');
@@ -406,16 +500,27 @@ function displayResult() {
 
     document.querySelector('.pop-up h3').innerText = finalResult.title;
     document.querySelector('.pop-up p').innerText = finalResult.message;
-    if (finalResult === results[0]) imgWarning.style.display = "none"; 
+    if (finalResult === results[0]) {
+        imgWarning.src = "./assets/img/greenBeing.png";
+        mutation(false);
+    } else {
+        imgWarning.src = "./assets/img/warning.png";
+        mutation(true);
+    }
     popUp.style.display = "block";
 }
 
-const alavancaId = mainAlavanca.id;
-console.log(alavancaId);
+const rayCaster = new THREE.Raycaster();
+
+/** 
+ * 2 dimensional director
+ * with x and y position
+ * contain the x, y position of the mouse click
+ * */
 
 const mousePosition = new THREE.Vector2();
-
-const rayCaster = new THREE.Raycaster();
+const mouseDown = new THREE.Vector2();
+const mouseMove = new THREE.Vector2();
 
 window.addEventListener('click', e => {
     mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -430,7 +535,7 @@ window.addEventListener('click', e => {
         const clickedObject = intersects[0].object;
 
         if (clickedObject === mainAlavanca) {
-            if (doorsClosed) {
+            if (doorsClosed && !isTeleporting) {
                 isMoving = true;
             } else {
                 displayWarning();
@@ -454,57 +559,69 @@ function displayWarning() {
     document.body.appendChild(warning);
     setTimeout(() => {
         warning.remove();
-    }, 3000);
+    }, 2000);
 }
+
+
+function mutation(canMutate) {
+    if (canMutate) {
+            body.scale.set(0.1, 0.4, 0.3);
+            head.position.y = 0.4;
+            arm1.rotation.z = Math.PI;
+            leg2.scale.set(0.05, 0.05, 0.05); 
+            cobaiaMaterial.color.set(0xff0000); 
+        } else {
+            
+            body.scale.set(0.200, 0.200, 0.150);
+            head.position.set(-0.094, 0.821, 0.866);
+            arm1.rotation.set(0, 0, THREE.MathUtils.degToRad(-10));
+            leg2.scale.set(0.050, 0.200, 0.050);
+            cobaiaMaterial.color.set(0x00FF00);
+        }
+}
+
+let speed = 0;
 
 function animate() {
 
     if (isTeleporting) {
         pointLight.intensity = Math.random() * 500;
+        speed += 1.3;
+        capsule.position.x = Math.sin(speed) * 0.002 /** range of motion */;
     } else {
         pointLight.intensity = 50;
+        capsule.position.x = 0;
     }
 
     if (isMoving) {
         if(movingForward) {
-            rotAlavanca += 0.02;
+            rotAlavanca += 0.1;
             if (rotAlavanca >= 2) {
                 movingForward = false; 
                 isMoving = false;
                 cobaia.visible = false;
                 isTeleporting = true;
                 
-                if (teleportStage === 0) { 
+                setTimeout(() => {
+                    isTeleporting = false;
+                    teleportComplete = true;
 
-                    setTimeout(() => {
-
-                        isTeleporting = false; 
-                        isMoving = true;
-                        doorsIsMoving = true;
-                        teleportComplete = true;
-                    }, 3000);
-
-                    cobaia.visible = false;
-                    teleportStage = 1;
-                } else {
-                    setTimeout(() => {
-                        isTeleporting = false;
+                    if (teleportStage === 0) {
+                        teleportStage = 1;
+                    } else {
+                        cobaia.visible = true;
                         displayResult();
-                        isMoving = true;
-                        doorsIsMoving = true;
-                        teleportComplete = true;
                         teleportStage = 0; // reset stage once finished
-                    }, 3000);
+                    }
 
-                    cobaia.visible = true;
-                }
-
+                    isMoving = true;
+                    doorsIsMoving = true;
+                }, 3000);
             }
         } else {
-            rotAlavanca -= 0.02;
-            if (rotAlavanca <= -0.5) {
+            rotAlavanca -= 0.1;
+            if (rotAlavanca <= -0.1) {
                 movingForward = true;
-                if (teleportStage === 1) cobaia.visible = true;
                 isMoving = false;
             }
             
