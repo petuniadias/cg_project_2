@@ -1,6 +1,6 @@
 export const randomResult = (array) => {
     const index = Math.floor(Math.random() * array.length);
-    return array[1];
+    return array[index];
 }
 
 /** * Executes the callback on the 3D object and all its descendants.
