@@ -1,8 +1,12 @@
 export const randomResult = (array) => {
     const index = Math.floor(Math.random() * array.length);
-    return array[index];
+    return array[1];
 }
 
+/** * Executes the callback on the 3D object and all its descendants.
+ * Usefull for GROUPS so you don't have to set castShadow and receiveShadow 
+ * on each descendant manually.
+*/
 export const setupShadows = (object) => {
     object.traverse((node) => {
         if (node.isMesh) {
@@ -10,15 +14,4 @@ export const setupShadows = (object) => {
             node.receiveShadow = true;
         }
     });
-}
-
-export const get = async (url) => {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("API didn't answer as expected");
-        return await response.json();
-    } catch (error) {
-        console.log("Couldn't fetch!");
-        throw error;
-    }
 }

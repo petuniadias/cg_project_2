@@ -1,7 +1,9 @@
 import * as THREE from 'three';
-import { COBAIA_PARTS, CAPSULE_WALLS, COLORS, GEOMETRIES, SETTINGS } from './constants.js';
+import { COBAIA_PARTS, CAPSULE_WALLS, COLORS, GEOMETRIES, SETTINGS, TELEPORT_RESULTS } from './constants.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.158.0/examples/jsm/controls/OrbitControls.js';
-import { randomResult, setupShadows, get } from './utils.js';
+import { randomResult, setupShadows } from './utils.js';
+
+// ---------- Renderer & Scene ----------
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
@@ -9,94 +11,107 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(
-    66.84,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-);
-
-const camera1 = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-);
+// ---------- Cameras ----------
+const camera = new THREE.PerspectiveCamera(66.84, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera1 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera1.position.set(0.319, 1.952, -0.302);
 camera1.rotation.set(THREE.MathUtils.degToRad(80),THREE.MathUtils.degToRad(-170), 0);
 
+const camera3 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera3.position.set(-0.601, 1.432, 0.438);
+camera3.rotation.set(THREE.MathUtils.degToRad(-58.00), THREE.MathUtils.degToRad(3), 0);
+
+const cameraPOV = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+
 let activeCamera = camera;
-const cam01 = document.querySelector('#cam01');
-const cam02 = document.querySelector('#cam02');
-cam01.classList.add('active');
 
-window.addEventListener("keydown", e => {
-    if (e.key === "2") {
-        activeCamera = camera1;
-        orbit.enabled = false;
-        cam02.classList.add('active');
-        cam01.classList.remove('active');
-    } else if(e.key === "1") {
-        activeCamera = camera;
-        orbit.enabled = true;
-        cam01.classList.add('active');
-        cam02.classList.remove('active');
-    }
-})
-
+// ---------- Camera Controls ----------
 const orbit = new OrbitControls(camera, renderer.domElement);
-
-// const axesHelper = new THREE.AxesHelper(3 /* changes the length of the axis */);
-// scene.add(axesHelper);
-
 camera.position.set(-2, 3, 6);
-
 camera.rotation.set(0, THREE.MathUtils.degToRad(-18), 0);
-
 orbit.target.set(0.1, 1, -0.1);
 orbit.update();
 
-// scene.background = new THREE.Color (0xff0000);
+// ---------- Camera Buttons ----------
+const cam01 = document.querySelector('#cam01');
+const cam02 = document.querySelector('#cam02');
+const cam03 = document.querySelector('#cam03');
+const camPOV = document.querySelector('#camPOV');
 
-// const gridHelper = new THREE.GridHelper();
-// scene.add(gridHelper);
+cam01.classList.add('active');
+cam01.innerText = "CAM01";
 
-let speed = 0;
-const state = {
-    microwave: 0,
-    doors: { isMoving: false, closed: false },
-    lever: { rotation: 0, movingForward: true, isMoving: false },
-    teleport: { isTeleporting: false, complete: false, stage: 0 },
-    btn1: { clicking: true, isMoving: false}
+function resetVisualBtns() {
+    cam01.classList.remove('active');
+    cam02.classList.remove('active');
+    cam03.classList.remove('active');
+    camPOV.classList.remove('active');
+    
+    cam01.innerText = "1";
+    cam02.innerText = "2";
+    cam03.innerText = "3";
+    camPOV.innerText = "4";
 }
 
-const platformMaterial = new THREE.MeshStandardMaterial({ color: COLORS.PLATFORM });
-
-const platform1 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
-scene.add(platform1);
-platform1.position.set(0.106, 0.09, -0.105);
-platform1.scale.set(1.600, 0.150, 1.600);
-
-const platform2 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
-platform1.attach(platform2);
-platform2.position.set(0.028, 0.795, -0.005);
-platform2.scale.set(0.8125, 2.3, 0.8125);
-
-platform1.receiveShadow = true;
-platform2.receiveShadow = true;
-
-//capsule
+// ---------- Materials & Textures ----------
 const wallMaterial = new THREE.MeshStandardMaterial({ color: COLORS.WALL });
+const cobaiaMaterial = new THREE.MeshStandardMaterial({ color: COLORS.COBAIA });
+const pecaMaterial = new THREE.MeshStandardMaterial({color: 0xBA6D00});
+const controllerMaterial = new THREE.MeshStandardMaterial({color: COLORS.PAINEL});
+const alavancaMaterial = new THREE.MeshStandardMaterial({color: 0xBA6D00});
+const cobaiaEyeMaterial = new THREE.MeshStandardMaterial({color: 0x000000});
+const ceilingMaterial = new THREE.MeshStandardMaterial({color: COLORS.PLATFORM});
+const textureLoader = new THREE.TextureLoader();
+const floorTexture = textureLoader.load('./assets/img/floor/floor-basecolor.png');
+const floorTextureNormal = textureLoader.load('./assets/img/floor/floor-normal.png');
+const floorTextureMetallic = textureLoader.load('./assets/img/floor/floor-metallic.png');
+const floorTextureRoughness = textureLoader.load('./assets/img/floor/floor-roughness.png');
+const floorTextureAmbientOcclusion = textureLoader.load('./assets/img/floor-ambient-occlusion.png');
+const floorTextureHeight = textureLoader.load('./assets/img/floor/floor-height.png');
 
-function createWall() {
-    return new THREE.Mesh(GEOMETRIES.BOX, wallMaterial);
+const platformMaterial = new THREE.MeshStandardMaterial({ 
+    color: COLORS.PLATFORM, 
+    map: floorTexture,
+    normalMap: floorTextureNormal, 
+    displacementMap: floorTexture, 
+    displacementScale: 0.02, // how much the displacement map affects the mesh
+    displacementBias: -0.01,
+    metalnessMap: floorTextureMetallic,
+    roughnessMap: floorTextureRoughness,
+    displacementMap: floorTextureHeight,
+    displacementScale: 0.02,
+    aoMap: floorTextureAmbientOcclusion,
+    aoMapIntensity: 1.0,
+});
+
+// ---------- Platform ----------
+function createPlatform() {
+    const platform1 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
+    scene.add(platform1);
+    platform1.position.set(0.106, 0.09, -0.105);
+    platform1.scale.set(1.600, 0.150, 1.600);
+    platform1.receiveShadow = true;
+
+    const platform2 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
+    platform1.attach(platform2);
+    platform2.position.set(0.028, 0.795, -0.005);
+    platform2.scale.set(0.8125, 2.3, 0.8125);
+    platform2.receiveShadow = true;
+    const platform3 = new THREE.Mesh(GEOMETRIES.CYLINDER, ceilingMaterial);
+    platform3.position.set(0.348, 0.525, -0.184);
+    platform3.scale.set(0.400, 0.100, 0.400);
+
+    return { platform1, platform2, platform3 };
 }
 
+const { platform1, platform2, platform3 } = createPlatform();
+
+// ---------- Capsule ----------
 const capsule = new THREE.Group();
 platform2.attach(capsule);
 
 CAPSULE_WALLS.forEach(data => {
-    const wall = createWall();
+    const wall = new THREE.Mesh(GEOMETRIES.BOX, wallMaterial);
     wall.position.set(...data.pos);
     wall.scale.set(...data.scale);
     wall.rotation.set(
@@ -106,8 +121,26 @@ CAPSULE_WALLS.forEach(data => {
     );
     capsule.attach(wall);
 });
+capsule.attach(platform3);
+setupShadows(capsule);
 
-// doors
+const ceiling = new THREE.Group();
+capsule.attach(ceiling);
+const ceiling1 = new THREE.Mesh(GEOMETRIES.CYLINDER, ceilingMaterial);
+ceiling.attach(ceiling1);
+ceiling1.position.set(0.359, 2.442, -0.125);
+ceiling1.scale.set(0.800, 0.200, 0.800);
+ceiling1.castShadow = true;
+ceiling1.receiveShadow = true;
+
+const ceiling2 = new THREE.Mesh(GEOMETRIES.CYLINDER, ceilingMaterial);
+ceiling.attach(ceiling2);
+ceiling2.position.set(0.359, 2.614, -0.125);
+ceiling2.scale.set(0.700, 0.200, 0.700);
+ceiling2.castShadow = true;
+ceiling2.receiveShadow = true;
+
+// ---------- Doors ----------
 const door1 = new THREE.Mesh(GEOMETRIES.BOX, wallMaterial);
 capsule.attach(door1);
 door1.position.set(-0.20, 1.348, 0.20);
@@ -120,49 +153,66 @@ door2.position.set(0.537, 1.348, 0.459);
 door2.rotation.set(0, THREE.MathUtils.degToRad(68.80), 0);
 door2.scale.set(0.100, 1.600, 0.30);
 
-const cylinder = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 32);
+// ---------- Lab Subject ----------
+const cobaia = new THREE.Group();
+platform3.attach(cobaia)
+cobaia.position.set(0, 0.6, 0);
 
-const platform3 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
-capsule.attach(platform3);
-platform3.position.set(0.348, 0.525, -0.184);
-platform3.scale.set(0.400, 0.100, 0.400);
+let cobaiaMeshes = {};
+COBAIA_PARTS.forEach(part => {
+    const material = part.name.toLowerCase().includes('eye') ? cobaiaEyeMaterial : cobaiaMaterial;
 
-
-/**
- * the cast shadow only works on meshes
- * this function verifies if is a mesh 
- * or not and applies the sahdow
- */
-
-setupShadows(capsule);
-
-// ceiling
-const ceiling = new THREE.Group();
-capsule.attach(ceiling);
-const ceilingMaterial = new THREE.MeshStandardMaterial({
-    color: 0xE3E3E3
+    const mesh = new THREE.Mesh(GEOMETRIES.BOX, material);
+    mesh.position.set(...part.pos);
+    mesh.scale.set(...part.scale);
+    mesh.rotation.set(0, THREE.MathUtils.degToRad(part.rot[1]), THREE.MathUtils.degToRad(part.rot[2]));
+    cobaia.add(mesh);
+    cobaiaMeshes[part.name] = mesh;
 });
-const ceiling1 = new THREE.Mesh(GEOMETRIES.CYLINDER, ceilingMaterial);
-ceiling.attach(ceiling1);
-ceiling1.position.set(0.359, 2.442, -0.125);
-ceiling1.scale.set(0.800, 0.200, 0.800);
-ceiling1.castShadow = true;
-ceiling1.receiveShadow = true;
 
-const ceiling2 = new THREE.Mesh(GEOMETRIES.CYLINDER, platformMaterial);
-ceiling.attach(ceiling2);
-ceiling2.position.set(0.359, 2.614, -0.125);
-ceiling2.scale.set(0.700, 0.200, 0.700);
-ceiling2.castShadow = true;
-ceiling2.receiveShadow = true;
+const { head, body, arm1, arm2, leg1, leg2, eye1, eye2 } = cobaiaMeshes;
+head.attach(eye1, eye2);
+body.attach(arm1, arm2, leg1, leg2, head);
+head.add(cameraPOV);
+setupShadows(cobaia);
 
-// controller
+// ---------- Lighting ----------
+const pointLight = new THREE.PointLight(0xC800FF, 500 /** intensity */, 3 /** distance */, 1.2 /** decay */);
+pointLight.castShadow = true;
+pointLight.shadow.bias = -0.005;
+pointLight.shadow.mapSize.width = 2048;
+pointLight.shadow.mapSize.height = 2048;
+pointLight.position.set(0.348, 1.519, -0.179);
+scene.add(pointLight);
+
+const spotLight = new THREE.SpotLight(0xFFFFFF, 10 /** intensity */);
+spotLight.position.set(-3.912, 3.158, 4.126);
+spotLight.penumbra = 0.5;
+spotLight.decay = 1.5;
+spotLight.angle = 0.5;
+spotLight.target = platform1;
+spotLight.castShadow = true;
+spotLight.shadow.mapSize.width = 4096;
+spotLight.shadow.mapSize.height = 4096;
+scene.add(spotLight);
+
+// ---------- State (Flags) ----------
+const state = {
+    microwave: 0,
+    doors: { isMoving: false, closed: false },
+    lever: { rotation: 0, movingForward: true, isMoving: false },
+    teleport: { isTeleporting: false, complete: false, stage: 0 },
+    btn1: { clicking: true, isMoving: false}
+}
+let speed = 0;
+let start = true;
+let selectedObject = null; // saves the dragged Object
+let popUp;
+
+
+// ---------- Control Panel ----------
 const controller = new THREE.Group();
 platform2.attach(controller);
-
-const controllerMaterial = new THREE.MeshStandardMaterial({
-    color: 0xC20000
-});
 
 const controller1 = new THREE.Mesh(GEOMETRIES.BOX, controllerMaterial);
 controller.attach(controller1);
@@ -179,13 +229,8 @@ controller2.scale.set(0.500, 0.400, 0.200);
 controller2.castShadow = true;
 controller2.receiveShadow = true;
 
-// alavanca
 const alavanca = new THREE.Group();
 controller1.attach(alavanca);
-
-const alavancaMaterial = new THREE.MeshStandardMaterial({
-    color: 0xBA6D00
-});
 const alavanca1 = new THREE.Mesh(GEOMETRIES.BOX, alavancaMaterial);
 alavanca.attach(alavanca1);
 alavanca1.position.set(-0.609, 0.965, 0.188);
@@ -210,9 +255,6 @@ alavanca3.scale.set(0.050, 0.020, 0.240);
 alavanca3.castShadow = true;
 alavanca3.receiveShadow = true;
 
-const pecaMaterial = new THREE.MeshStandardMaterial({
-    color: 0xBA6D00
-});
 const peca1 = new THREE.Mesh(GEOMETRIES.CYLINDER, pecaMaterial);
 alavanca.attach(peca1);
 peca1.position.set(-0.609, 0.972, 0.197);
@@ -232,6 +274,7 @@ peca2.receiveShadow = true;
 const mainMechanics = new THREE.Group();
 alavanca.add(mainMechanics);
 mainMechanics.position.set(-0.559, 0.973, 0.203);
+setupShadows(mainMechanics);
 
 const roldana = new THREE.Mesh(GEOMETRIES.CYLINDER, pecaMaterial);
 mainMechanics.add(roldana);
@@ -244,37 +287,11 @@ roldana.receiveShadow = true;
 const mainAlavanca = new THREE.Mesh(GEOMETRIES.BOX, alavancaMaterial);
 mainMechanics.add(mainAlavanca);
 mainAlavanca.rotation.set(THREE.MathUtils.degToRad(70), 0, 0);
-// mainAlavanca.position.set(-0.559, 1.055, 0.164);
 mainAlavanca.position.set(0, 0.08, -0.03);
 mainAlavanca.scale.set(0.050, 0.050, 0.200);
 
-setupShadows(mainMechanics);
-
-// const cobaia2 = new THREE.Group();
-const cobaia = new THREE.Group();
-const cobaiaMaterial = new THREE.MeshStandardMaterial({ color: COLORS.COBAIA });
-let cobaiaMeshes = {};
-// cobaia2.add(cobaia);
-COBAIA_PARTS.forEach(part => {
-    const mesh = new THREE.Mesh(GEOMETRIES.BOX, cobaiaMaterial);
-    mesh.position.set(...part.pos);
-    mesh.scale.set(...part.scale);
-    mesh.rotation.set(0, THREE.MathUtils.degToRad(part.rot[1]), THREE.MathUtils.degToRad(part.rot[2]));
-    cobaia.add(mesh);
-    cobaiaMeshes[part.name] = mesh;
-});
-
-const cobaiaEyeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x000000
-});
-
-setupShadows(cobaia);
-
-platform3.attach(cobaia)
-cobaia.position.set(0, 0, 0);
-
-const helper = new THREE.AxesHelper(0.5);
-cobaia.add(helper);
+cameraPOV.position.set(0,0.5,0.1);
+cameraPOV.rotation.set(THREE.MathUtils.degToRad(-12), 0, 0);
 
 // button
 const button1Group = new THREE.Group();
@@ -322,70 +339,144 @@ light2.rotation.set(THREE.MathUtils.degToRad(90), 0, THREE.MathUtils.degToRad(25
 light2.scale.set(0.100, 0.100, 0.100);
 light.attach(light2);
 
-// light
+// ---------- Helpers ----------
+function isCobaiaInsideCapsule() {
+    const worldCobaia = new THREE.Vector3();
+    const worldCapsule = new THREE.Vector3();
 
-const pointLight = new THREE.PointLight(0xC800FF, 500 /** intensity */);
-pointLight.castShadow = true;
-pointLight.distance = 3;
-pointLight.decay = 1.2;
-pointLight.shadow.bias = -0.005;
-pointLight.shadow.mapSize.width = 2048;
-pointLight.shadow.mapSize.height = 2048;
+    cobaia.getWorldPosition(worldCobaia);
+    platform3.getWorldPosition(worldCapsule);
 
-scene.add(pointLight);
-pointLight.position.set(0.348, 1.519, -0.179);
+    const distance = worldCobaia.distanceTo(worldCapsule);
 
-const spotLight = new THREE.SpotLight(0xFFFFFF, 10 /** intensity */);
-scene.add(spotLight);
+    return distance < 0.6;
+}
 
-spotLight.position.set(-3.912, 3.158, 4.126);
-spotLight.penumbra = 1;
-spotLight.decay = 1.5;
-spotLight.angle = 0.5;
-
-spotLight.target = platform1;
-spotLight.castShadow = true;
-
-spotLight.shadow.mapSize.width = 4096;
-spotLight.shadow.mapSize.height = 4096;
-
-// const sLightHelper = new THREE.SpotLightHelper(spotLight, 2 /** size of the light */);
-// scene.add(sLightHelper);
-
-// const sLightShadowHelper = new THREE.CameraHelper(spotLight.shadow.camera);
-// scene.add(sLightShadowHelper);
-
-// const textureLoader = new THREE.TextureLoader();
-// scene.background = textureLoader.load('./assets/img/creepylab.jpg');
-
-const results = [
-    {
-        title: "Teletransportation Success!",
-        message: "All atoms are present and correct. Subject is stable.",
-        status: "Normal"
-    },
-    {
-        title: "Quantum Shuffle Detected!",
-        message: "DNA sequence corrupted. Physical geometry inverted.",
-        status: "Critical Error"
+// ---------- Listeners ----------
+window.addEventListener("keydown", e => {
+    if (e.key === "2") {
+        resetVisualBtns();
+        activeCamera = camera1;
+        orbit.enabled = false;
+        cam02.classList.add('active');
+        cam02.innerText = "CAM02";
+    }  else if(e.key === "3") {
+        resetVisualBtns();
+        activeCamera = camera3;
+        orbit.enabled = false;
+        cam03.classList.add('active');
+        cam03.innerText = "CAM03";
+    } else if (e.key === "4") {
+        if (!cobaia.visible) return activeCamera = camera;
+        resetVisualBtns();
+        activeCamera = cameraPOV;
+        camPOV.classList.add('active');
+        camPOV.innerText = "4 - POV";
+    } else if(e.key === "1" || activeCamera === camera) {
+        resetVisualBtns();
+        activeCamera = camera;
+        orbit.enabled = true;
+        cam01.classList.add('active');
+        cam01.innerText = "CAM01";
     }
-];
+});
 
+const rayCaster = new THREE.Raycaster();
+const mousePosition = new THREE.Vector3();
+const interactableObjects = [mainAlavanca, button1];
 
-let popUp;
+document.addEventListener('click', e => {
+    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    
+    rayCaster.setFromCamera(mousePosition, activeCamera);
 
+    const intersects = rayCaster.intersectObjects(interactableObjects, true);
+    
+    if(intersects.length > 0) {
+        const clickedObject = intersects[0].object;
+
+        if (clickedObject === mainAlavanca) {
+            if (!isCobaiaInsideCapsule()) {
+                displayWarning();
+                return;
+            }
+            if (state.doors.closed && !state.teleport.isTeleporting) {
+                state.lever.isMoving = true;
+            } else {
+                displayWarning();
+            }
+        }
+
+        if (clickedObject === button1) {
+            state.btn1.isMoving = true;
+        }
+    }
+});
+
+const offset = new THREE.Vector3();
+
+document.addEventListener('mousedown', e => {
+    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    rayCaster.setFromCamera(mousePosition, activeCamera /** the camera which the ray originates */);
+
+    const intersects = rayCaster.intersectObjects(cobaia.children);
+    
+    if (intersects.length > 0) {
+        selectedObject = cobaia;
+        orbit.enabled = false;
+
+        const intersectsPlane = rayCaster.intersectObject(plane);
+        if (intersectsPlane.length > 0) {
+            offset.copy(intersectsPlane[0].point).sub(selectedObject.position);
+        }
+    }
+});
+
+document.addEventListener('mousemove', e => {
+    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    rayCaster.setFromCamera(mousePosition, activeCamera);
+
+    if (selectedObject) {
+        const intersects = rayCaster.intersectObject(plane);
+        if (intersects.length > 0) {
+            selectedObject.position.copy(intersects[0].point.sub(offset));
+        }
+
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (selectedObject) {
+        const distance = selectedObject.position.distanceTo(platform3.position);
+        if (distance < 0.8) {
+            platform3.attach(selectedObject);
+            selectedObject.position.set(0, 0.6, 0);
+        } else {
+            scene.attach(selectedObject);
+        }
+    }
+    selectedObject = null;
+    orbit.enabled = true;
+});
+
+// ---------- UI ----------
 function createMessage() {
     popUp = document.createElement('div');
     popUp.classList.add('pop-up');
     document.body.appendChild(popUp);
     popUp.innerHTML += `
         <div class="title">
-            <h3>Teleportation completed!</h3>
+            <h3></h3>
             <i data-lucide="x" class="x-mark" style="cursor: pointer;"></i>
         </div>
         <div style="display: flex; align-items: center; flex-direction: column;">
-            <img src="./assets/img/warning.png" alt="">
-            <p>All atoms are present.</p>
+            <img src="" alt="">
+            <p></p>
         </div>
     `;
 
@@ -400,14 +491,15 @@ function createMessage() {
 }
 
 createMessage();
+
 const imgWarning = popUp.querySelector('img');
 
 function displayResult() {
-    const finalResult = randomResult(results);
+    const finalResult = randomResult(TELEPORT_RESULTS);
 
     popUp.querySelector('h3').innerText = finalResult.title;
     popUp.querySelector('p').innerText = finalResult.message;
-    if (finalResult === results[0]) {
+    if (finalResult === TELEPORT_RESULTS[0]) {
         imgWarning.src = "./assets/img/greenBeing.png";
         mutation(false);
     } else {
@@ -417,103 +509,18 @@ function displayResult() {
     popUp.style.display = "block";
 }
 
-const rayCaster = new THREE.Raycaster();
-
-/** 
- * 2 dimensional director
- * with x and y positionv
- * contain the x, y position of the mouse click
- */
-
-const mousePosition = new THREE.Vector2();
-
-const interactableObjects = [mainAlavanca, button1];
-
-document.addEventListener('click', e => {
-    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
-    
-    rayCaster.setFromCamera(mousePosition, camera);
-
-    const intersects = rayCaster.intersectObjects(interactableObjects, true);
-    // console.log(intersects);
-    
-    if(intersects.length > 0) {
-        const clickedObject = intersects[0].object;
-
-        if (clickedObject === mainAlavanca) {
-            if (state.doors.closed && !state.teleport.isTeleporting) {
-                state.lever.isMoving = true;
-            } else {
-                displayWarning();
-            }
-        }
-
-        if (clickedObject === button1) {
-            state.btn1.isMoving = true;
-        }
-    }
-});
-
-const planeGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
-const planeMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, visible: false});
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-scene.add(plane);
-
-
-let selectedObject = null;
-const dragRaycaster = new THREE.Raycaster();
-const offset = new THREE.Vector3();
-
-document.addEventListener('mousedown', e => {
-    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-    dragRaycaster.setFromCamera(mousePosition, camera);
-
-    const intersects = dragRaycaster.intersectObjects(cobaia.children);
-    
-    if (intersects.length > 0) {
-        selectedObject = cobaia;
-        orbit.enabled = false;
-        console.log(selectedObject);
-
-        const intersectsPlane = dragRaycaster.intersectObject(plane);
-        offset.copy(intersectsPlane[0].point).sub(selectedObject.position);
-    }
-});
-
-const LIMITES = {
-    xMin: -0.5,
-    xMax: 1.2,
-    zMin: -0.8,
-    zMax: 0.5
-};
-
-document.addEventListener('mousemove', e => {
-    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mousePosition.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-    dragRaycaster.setFromCamera(mousePosition, camera);
-
-    if (selectedObject) {
-        const intersects = dragRaycaster.intersectObject(plane);
-        selectedObject.position.copy(intersects[0].point.sub(offset));
-
-    }
-});
-
-document.addEventListener('mouseup', () => {
-    selectedObject = null;
-    orbit.enabled = true;
-});
-
 function displayWarning() {
     const warning = document.createElement('div');
     warning.classList.add("pop-up");
-    warning.innerHTML += `
-      <h3>Close the door to start teleportation! (for safety reasons)</h3>
-    `;
+    if (!isCobaiaInsideCapsule()) {
+        warning.innerHTML += `
+        <h3>There's no subject to teleport. Put the subject inside the capsule</h3>
+        `;
+    } else {
+        warning.innerHTML += `
+        <h3>Close the door to start teleportation! (for safety reasons)</h3>
+        `;
+    }
 
     warning.style.display = 'block';
     document.body.appendChild(warning);
@@ -522,17 +529,22 @@ function displayWarning() {
     }, 2000);
 }
 
+const planeMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, visible: false});
+const plane = new THREE.Mesh(GEOMETRIES.PLANE, planeMaterial);
+scene.add(plane);
+plane.rotation.set(THREE.MathUtils.degToRad(-90), 0, 0);
+plane.position.set(0, 0, 0);
+
 function mutation(canMutate) {
-    const { body, head, arm1, leg2 } = cobaiaMeshes;
-    if (canMutate) {
+        if (canMutate) {
             body.scale.set(0.1, 0.4, 0.3);
-            head.position.y = 0.49;
+            head.position.y = 0.2;
             arm1.rotation.z = Math.PI;
             leg2.scale.set(0.05, 0.05, 0.05); 
             cobaiaMaterial.color.set(0xff0000); 
         } else {
-            body.scale.set(0.200, 0.200, 0.150);
-            head.position.set(0, 0.49, 0);
+            body.scale.set(0.2, 0.2, 0.15);
+            head.position.set(0, 0.45, 0);
             arm1.rotation.set(0, 0, THREE.MathUtils.degToRad(-10));
             leg2.scale.set(0.050, 0.200, 0.050);
             cobaiaMaterial.color.set(COLORS.COBAIA);
@@ -571,16 +583,17 @@ function updateLever() {
                 state.lever.movingForward = false; 
                 state.lever.isMoving = false;
                 cobaia.visible = false;
+                camPOV.classList.add('disabled');
                 state.teleport.isTeleporting = true;
                 
                 setTimeout(() => {
                     state.teleport.isTeleporting = false;
-                    state.teleport.complete = true;
 
                     if (state.teleport.stage === 0) {
                         state.teleport.stage = 1;
                     } else {
                         cobaia.visible = true;
+                        camPOV.classList.remove('disabled');
                         displayResult();
                         state.teleport.stage = 0; // reset stage once finished
                     }
@@ -636,17 +649,31 @@ function updateBtn() {
     }
 }
 
-function animate() {
+function startAnimation() {
+    if (start) {
+        camera.fov -= 0.2;
+        camera.position.z -= 0.009;
+        camera.rotation.x -= 0.0007;
+        camera.rotation.z -= 0.0003;
+        camera.position.x += 0.003;
+        camera.updateProjectionMatrix();
+        orbit.enabled = false;
+        if (camera.fov <= 40) {
+            start = false;
+        }
+    } 
+}
 
+function animate() {
+    startAnimation();
     updateDoors();
     updateLever();
     teleport();
     updateBtn();
 
     state.microwave += SETTINGS.MICROWAVE_SPEED;
-
+    
     platform3.rotation.y = state.microwave;
-
     renderer.render(scene, activeCamera);
 }
 
